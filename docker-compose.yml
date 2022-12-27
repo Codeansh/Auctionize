@@ -1,0 +1,112 @@
+version: '3'
+services:
+
+# AUCTION SERVICE
+  auction:
+    build:
+      context: ./auction_service/.
+      dockerfile: Dockerfile
+    container_name: auction
+    ports:
+      - "5001:5001"
+    image: auction:3.6
+    restart: unless-stopped
+    environment:
+      APP_ENV: 'dev'
+      APP_DEBUG: "True"
+      APP_PORT: 5001
+      AUTH_HOSTNAME: auth
+      MONGODB_DATABASE: Auction
+      MONGODB_USERNAME: mongodbuser
+      MONGODB_PASSWORD: password
+      MONGODB_HOSTNAME: auction_db
+    volumes:
+      - ./auction_service:/app/auction
+    depends_on:
+      - auction_db
+      - auth
+    networks:
+      - auc_db
+      - auth
+
+# AUCTION DATABASE
+
+  auction_db:
+    image: mongo:4.0.4
+    container_name: auction_db
+    restart: unless-stopped
+    volumes:
+      - auctiondb_data:/data/db
+    networks:
+      - auc_db
+
+# AUTH SERVICE
+
+  auth:
+    build:
+      context: ./auth_service/
+      dockerfile: Dockerfile
+
+    container_name: auth
+
+    ports:
+      - "5000:5000"
+
+
+    image: auth:3.6
+    restart: unless-stopped
+
+    environment:
+      APP_ENV: 'dev'
+      APP_DEBUG: "True"
+      APP_PORT: 5000
+      MONGODB_DATABASE: Auth
+      MONGODB_USERNAME: mongodbuser
+      MONGODB_PASSWORD: password
+      MONGODB_HOSTNAME: auth_db
+
+    volumes:
+      - ./auth_service:/app/auth
+
+    depends_on:
+      - auction_db
+
+    networks:
+      - auth_db
+      - auth
+
+# AUTH DATABASE
+
+  auth_db:
+    image: mongo:4.0.4
+    container_name: auth_db
+    restart: unless-stopped
+    volumes:
+      - authdb_data:/data/db
+
+    networks:
+      - auth_db
+
+networks:
+
+  auth:
+    driver: bridge
+  auth_db:
+    driver: bridge
+  auc_db:
+    driver: bridge
+
+
+volumes:
+
+  authdb_data:
+    driver: local
+
+  auctiondb_data:
+    driver: local
+
+
+
+
+
+
