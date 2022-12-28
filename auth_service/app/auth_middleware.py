@@ -1,6 +1,5 @@
-import os
+import os, json, jwt
 from werkzeug.wrappers import Request, Response
-import jwt
 from app.auth.models import User
 from bson import ObjectId
 
@@ -25,27 +24,28 @@ class Authentication_Middleware:
             token = request.headers["Authorization"].split(" ")[1]
 
         if not token:
-            error = 'Please Enter the token to verify your identity...'
-            response = Response(error, mimetype='text/plain', status=401)
+            error = {'message' : 'Please Enter the token to verify your identity '}
+            response = Response(json.dumps(error), mimetype='text/plain', status=401)
             return response(environ, start_response)
 
         try:
             user_id = jwt.decode(token, os.environ.get('SECRET_KEY'), 'HS256')['user_id']
             if not user_id:
-                error = 'Please Login again '
-                response = Response(error, mimetype='text/plain', status=401)
+                error = {'message': 'Please Login again'}
+
+                response = Response(json.dumps(error), mimetype='text/plain', status=401)
                 return response(environ, start_response)
 
         except Exception as e:
-            error = 'Something went wrong ' + str(e)
-            response = Response(error, mimetype='text/plain', status=401)
+            error = {'message': 'Something went wrong ' + str(e)}
+            response = Response(json.dumps(error), mimetype='text/plain', status=401)
             return response(environ, start_response)
 
         user_obj = User.objects(id=ObjectId(user_id))
 
         if not user_obj:
-            error = 'user_id not found'
-            response = Response(error, mimetype='text/plain', status=401)
+            error = {'message' : 'user_id not found'}
+            response = Response(json.dumps(error), mimetype='text/plain', status=401)
             return response(environ, start_response)
 
         environ['user_id'] = user_id

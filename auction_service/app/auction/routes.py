@@ -4,7 +4,6 @@ import json
 from app.auction.models import Auction
 from bson import ObjectId
 
-
 auction = Blueprint('auctions', __name__, url_prefix='/auctions')
 
 
@@ -12,11 +11,14 @@ auction = Blueprint('auctions', __name__, url_prefix='/auctions')
 def auctions():
     if request.environ.get('is_admin'):
         auction_objects = Auction.objects()
-        return jsonify(auction_objects)
+    else:
+        raw_query = {'start_time': {'$lt': datetime.utcnow()}, 'end_time': {'$gt': datetime.utcnow()}}
+        auction_objects = Auction.objects(__raw__=raw_query)
 
-    raw_query = {'start_time': {'$lt': datetime.utcnow()}, 'end_time': {'$gt': datetime.utcnow()}}
-    auction_objects = Auction.objects(__raw__=raw_query)
-    return jsonify(auction_objects)
+    if not auction_objects:
+        return jsonify({"message": "No auction available"}), 404
+
+    return jsonify(auction_objects), 200
 
 
 @auction.route('/<auction_id>', methods=['POST'])
@@ -33,12 +35,13 @@ def bidding(auction_id: str):
     bidding_amount = json.loads(request.data).get('bidding_amount')
     if not bidding_amount:
         return jsonify({"message": "bidding_amount is a required field"}), 400
+
     bidding_amount = float(bidding_amount)
 
     if bidding_amount > auction_obj.highest_bid:
         auction_obj.update(highest_bid=bidding_amount, user_id=user_id)
         auction_obj = Auction.objects(id=auction_id).first()
-        return jsonify(auction_obj)
+        return jsonify(auction_obj), 200
 
     return jsonify({"message": "invalid bidding amount"}), 400
 
@@ -54,13 +57,19 @@ def create_auction():
         highest_bid = data.get('start_price')
         currency_string = data.get('currency_string')
 
-        if not ( item_name and start_price and start_time and end_time and highest_bid and currency_string ):
+        if not (item_name and start_price and start_time and end_time and highest_bid and currency_string):
             return jsonify({
                 "message": "item_name, start_price, start_time, end_time, highest_bid, currency_string are required"
-                }), 400
+            }), 400
 
-        start_time = datetime.strptime(start_time, '%m/%d/%Y %H:%M')
-        end_time = datetime.strptime(end_time, '%m/%d/%Y %H:%M')
+        try:
+            start_time = datetime.strptime(start_time, '%d/%m/%Y %H:%M')
+            end_time = datetime.strptime(end_time, '%d/%m/%Y %H:%M')
+        except ValueError as e:
+            return jsonify({"message": str(e)}), 400
+
+        if start_time >= end_time:
+            return jsonify({"message": "start time must be less than end time"}), 400
 
         auction_obj = Auction(
             item_name=item_name,
@@ -73,8 +82,7 @@ def create_auction():
 
         auction_obj.save()
 
-        return jsonify(auction_obj),200
-
+        return jsonify(auction_obj), 201
 
     return jsonify({"message": "Forbidden"}), 403
 
@@ -85,8 +93,8 @@ def view_auction(auction_id: str):
         auction_obj = Auction.objects(id=ObjectId(auction_id)).first()
         if not auction_obj:
             return jsonify({"message": "Auction not found"}), 404
-        return jsonify(auction_obj)
-    return jsonify({"message": "unauthorized"}), 401
+        return jsonify(auction_obj), 200
+    return jsonify({"message": "unauthorized"}), 403
 
 
 @auction.route('/update/<auction_id>', methods=['PUT'])
@@ -95,8 +103,8 @@ def update_auction(auction_id: str):
         auction_obj = Auction.objects(id=ObjectId(auction_id)).first()
         if not auction_obj:
             return jsonify({"message": "Auction not found"}), 404
-        data = json.loads(request.data)
 
+        data = json.loads(request.data)
         data['start_time'] = datetime.strptime(data['start_time'], '%m/%d/%Y %H:%M')
         data['end_time'] = datetime.strptime(data['end_time'], '%m/%d/%Y %H:%M')
 
@@ -106,8 +114,8 @@ def update_auction(auction_id: str):
             auction_obj.update(highest_bid=new_start_price, user_id=None)
 
         auction_obj = Auction.objects(id=auction_id)
-        return jsonify(auction_obj)
-    return jsonify({"message": "unauthorized"}), 401
+        return jsonify(auction_obj),200
+    return jsonify({"message": "unauthorized"}), 403
 
 
 @auction.route('/delete/<auction_id>', methods=['DELETE'])
@@ -118,5 +126,6 @@ def delete_auction(auction_id: str):
             return jsonify({"message": "Auction not found"}), 404
 
         auction_obj.delete()
-        return jsonify({'success': 'Deleted successfully'}), 200
-    return jsonify({"message": "unauthorized"}), 401
+        return jsonify({'success': 'Deleted successfully'}), 204
+
+    return jsonify({"message": "unauthorized"}), 403

@@ -18,7 +18,7 @@ def register():
     
     user_obj = User.objects(email=email)
     if user_obj:
-        return jsonify({'message': 'Email already registered'})
+        return jsonify({'message': 'Email already registered'}), 409
     
     user_obj = User(username=username, email=email).save()
     user_obj.set_password(password)
@@ -47,7 +47,7 @@ def view_users():
         user_objs = User.objects()
         return jsonify(user_objs), 200
 
-    return jsonify({"error": "Unauthorized"}), 401
+    return jsonify({"error": "Unauthorized"}), 403
 
 @auth.route('/users/<id>', methods=['GET'])
 def get_user(id:str):
