@@ -27,7 +27,7 @@ def auctions():
     return jsonify(auction_objects), 200
 
 
-@auction.route('/<auction_id>', methods=['POST'])
+@auction.route('/bid/<auction_id>', methods=['POST'])
 def bidding(auction_id: str):
     user_id = request.environ.get('user_id')
     auction_obj = Auction.objects(id=ObjectId(auction_id)).first()

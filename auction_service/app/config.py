@@ -1,7 +1,7 @@
 import os
 
 
-class Config:
+class Config(object):
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
     ADMIN_AUTH_KEY = os.environ.get('ADMIN_AUTH_KEY', 'hey-i-am-so-secret')
     MONGODB_SETTINGS = {
