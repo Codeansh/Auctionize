@@ -33,12 +33,10 @@ class AuthenticationMiddleware:
             return response(environ, start_response)
 
         if response.status_code != 200:
-            error = {"message": response.text}
-            print("here i am ", response.text)
             response = Response(response.text, mimetype='application/json', status=401)
             return response(environ, start_response)
 
-        print("here you are ", response.text)
+
         user_id = json.loads(response.text).get('user_id')
         environ['user_id'] = user_id
 

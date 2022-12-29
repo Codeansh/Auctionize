@@ -15,4 +15,4 @@ python-dotenv
 requests
 Werkzeug==2.2.2
 WTForms==3.0.1
-
+Flask-Pydantic

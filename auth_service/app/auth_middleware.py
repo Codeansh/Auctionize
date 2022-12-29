@@ -10,8 +10,7 @@ class Authentication_Middleware:
 
     def __call__(self, environ, start_response):
         request = Request(environ)
-
-        if request.environ.get('REQUEST_URI') in os.environ.get('UNAUTHENTICATED_ROUTES'):
+        if request.environ.get('REQUEST_URI') in os.environ.get('UNAUTHENTICATED_ROUTES',['/auth/signup','/auth/login']):
             return self.app(environ, start_response)
 
         secret = request.headers.get('ADMIN_AUTH','')
@@ -29,7 +28,7 @@ class Authentication_Middleware:
             return response(environ, start_response)
 
         try:
-            user_id = jwt.decode(token, os.environ.get('SECRET_KEY'), 'HS256')['user_id']
+            user_id = jwt.decode(token, os.environ.get('SECRET_KEY','this is a secret key'), 'HS256')['user_id']
             if not user_id:
                 error = {'message': 'Please Login again'}
 
