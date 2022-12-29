@@ -24,7 +24,7 @@ class AuthenticationMiddleware:
             return response(environ, start_response)
         try:
             response = requests.post(
-                f"http://{os.environ.get('AUTH_HOSTNAME')}:5000/auth/validate",
+                f"http://{os.environ.get('AUTH_HOSTNAME','localhost')}:5000/auth/validate",
                 headers={'Authorization': token}
             )
         except ConnectionError as e:
@@ -33,9 +33,9 @@ class AuthenticationMiddleware:
             return response(environ, start_response)
 
         if response.status_code != 200:
-            error = {"message": response.text}
-            response = Response(json.dumps(error), mimetype='application/json', status=401)
+            response = Response(response.text, mimetype='application/json', status=401)
             return response(environ, start_response)
+
 
         user_id = json.loads(response.text).get('user_id')
         environ['user_id'] = user_id
